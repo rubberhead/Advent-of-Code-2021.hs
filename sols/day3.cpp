@@ -279,7 +279,7 @@ long getSol2(string filepath) {
 }
 
 int main() {
-    // cout << getSol1("../resource/q3/input") << endl;
+    cout << getSol1("../resource/q3/input") << endl;
     cout << getSol2("../resource/q3/input") << endl;
     return 0;
 }
