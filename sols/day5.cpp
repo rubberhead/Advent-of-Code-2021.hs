@@ -1,8 +1,12 @@
 #include <iostream>
+#include <fstream>
 #include <vector>
+#include <map>
 #include <cmath>
+#include <cstring>
 #include <cassert>
 #include <numeric>
+#include <algorithm>
 using namespace std;
 
 class xyPair {
@@ -44,6 +48,14 @@ class xyPair {
 
 };
 
+// slapstick fix for no match to 'operator<'
+bool operator < (xyPair const &lhs, xyPair const &rhs) {
+    if (lhs.x == rhs.x) {
+        return (lhs.y < rhs.y);
+    } 
+    return (lhs.x < rhs.x);
+}
+
 // Returns whether b is in line segment a-c.
 // Assumes a, b, c collinear.
 bool isInBetween (xyPair a, xyPair b, xyPair c) {
@@ -69,7 +81,8 @@ typedef struct vectorLine {
     Denote vectorLine l1 = <p> + t<r> and l2 = <q> + u<s>. t and u range from [0, 1].
     In this way direction vector is normalized and any potential intersection MUST have t' and u' btwn [0, 1]. 
 
-    Returns either the pointer to vector of intersecting point(s) in discrete form or nullptr if none exists.
+    Returns the pointer to vector of intersecting point(s) as provided (In non-intersecting cases no elements would 
+    be pushed into the vector).
 */
 vector<xyPair> * intersections(vectorLine l1, vectorLine l2, vector<xyPair> &result) {
     // Direction vectors
@@ -92,7 +105,7 @@ vector<xyPair> * intersections(vectorLine l1, vectorLine l2, vector<xyPair> &res
             result.push_back(intersection);
             return (&result);
         }
-        return (nullptr);
+        return (&result);
     } else { // i.e., parallel
         // Three cases:
         // 1. Two segments are collinear but not intersecting
@@ -116,21 +129,88 @@ vector<xyPair> * intersections(vectorLine l1, vectorLine l2, vector<xyPair> &res
                 }
             }
 
-            if (result.size() > 0) {
-                return (&result);
-            }
-
-            return (nullptr);
+            return (&result);
         } else { // otherwise parallel
-            return (nullptr);
+            return (&result);
         }
     }
 }
 
-// Get size of overlapping point set resulting from each line insertion
-// Return a map of points -> # of overlaps (need to check what data structure to use)
-void getSol1(vector<vectorLine> &lines) {
+vector<vectorLine> parser(string filepath, bool vertical_horizontal_only = false) {
+    ifstream inputf (filepath);
+    string nextline;
+    
+    vector<vectorLine> lines;
+    while (inputf.peek() != EOF) {
+        getline (inputf, nextline);
+        // Parse first and second xyPairs
+        // Assuming each line is structured as x,y -> a,b
+        char* token_1 = strtok(&(nextline[0]), ",");
+        char* token_2 = strtok(nullptr, " ");
+        xyPair startPair (stoi(token_1), stoi(token_2));
 
+        strtok(nullptr, " "); // Pattern-matching
+        char* token_3 = strtok(nullptr, ",");
+        char* token_4 = strtok(nullptr, ","); // last char so whatever limiter helps really
+        xyPair endPair (stoi(token_3), stoi(token_4));
+
+        if (vertical_horizontal_only) {
+            if ((startPair.x == endPair.x) || (startPair.y == endPair.y)) {
+                lines.push_back({startPair, endPair});
+                //cout << "(" << token_1 << "," << token_2 << ") -> ";
+                //cout << "(" << token_3 << "," << token_4 << ")" << endl;
+            }
+            continue;
+        }
+
+        lines.push_back({startPair, endPair});
+    }
+
+    return (lines);
+} 
+
+
+
+// Get size of overlapping point set resulting from each line insertion.
+map<xyPair, int> * getSol1(vector<vectorLine> &lines, map<xyPair, int> &overlaps) {
+    for (int i = 0; i < lines.size(); i++) {
+        for (int j = i + 1; j < lines.size(); j++) {
+            vector<xyPair> intersectionSet;
+            intersections(lines[i], lines[j], intersectionSet);
+            if (intersectionSet.size() > 0) {
+                for (xyPair point : intersectionSet) {
+                    try {
+                        overlaps.at(point) ++;
+                    } catch (out_of_range) {
+                        overlaps[point] = 2;
+                    }
+                }
+            }
+        }
+    }
+
+    return (&overlaps);
+}
+
+
+
+// Poverty edition that check in the most conserved fashion.
+// i.e., This one assumes lines to be either vertical or parallel (maybe collinear) with each other. 
+int getSol1Poverty(vector<vectorLine> &lines, vector<xyPair> &intersectingPoints) {
+    for (int i = 0; i < lines.size(); i++) {
+        for (int j = i + 1; j < lines.size(); j++) {
+            vectorLine l1 = lines[i];
+            vectorLine l2 = lines[j];
+            vector<xyPair> intersectionSet;
+            intersections(l1, l2, intersectionSet);
+            for (xyPair x : intersectionSet) {
+                if (find(intersectingPoints.begin(), intersectingPoints.end(), x) == intersectingPoints.end()) {
+                    intersectingPoints.push_back(x);
+                }
+            }
+        }
+    }
+    return (intersectingPoints.size());
 }
 
 void test() {
@@ -145,15 +225,48 @@ void test() {
     vectorLine l9 = {xyPair (0, 0), xyPair (8, 8)};
     vectorLine l10 = {xyPair (5, 5), xyPair (8, 2)};
 
+    // Intersection Check
     vector<xyPair> intersectionSet;
     vector<xyPair> * results = intersections(l5, l9, intersectionSet);
-    assert(results == nullptr);
+    assert(results->size() == 0);
     results = intersections(l1, l7, intersectionSet);
     assert(&intersectionSet == results);
+    assert(intersectionSet.size() == 3);
+    intersectionSet.clear();
+    results = intersections(l9, l10, intersectionSet);
+    assert(intersectionSet.size() != 0);
+
+    // Parser
+    vector<vectorLine> parsedLines = parser("../resource/q5/input_test");
+    assert(parsedLines[0].start == l1.start && parsedLines[0].end == l1.end);
+    assert(parsedLines[9].start == l10.start && parsedLines[9].end == l10.end);
+
+    // getSol1
+    parsedLines = parser("../resource/q5/input_test", true);
+    map<xyPair, int> sol1;
+    getSol1(parsedLines, sol1);
+    /*
+    for (auto it = sol1.begin(); it != sol1.end(); it++) {
+        cout << "(" << it->first.x << "," << it->first.y << "): " << it->second << endl;
+    }*/
+    assert(sol1.size() == 5);
+    parsedLines = parser("../resource/q5/input_test");
+    sol1.clear();
+    getSol1(parsedLines, sol1);
+    /*
+    for (auto it = sol1.begin(); it != sol1.end(); it++) {
+        cout << "(" << it->first.x << "," << it->first.y << "): " << it->second << endl;
+    }*/
+    assert(sol1.size() == 12);
 }
 
 int main() {
     test();
+    vector<vectorLine> parsedLines = parser("../resource/q5/input", true);
+    vector<xyPair> intersectingPoints;
+    int result = getSol1Poverty(parsedLines, intersectingPoints);
+    cout << result << endl;
+    
     return 0;
 }
 
