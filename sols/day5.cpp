@@ -112,9 +112,7 @@ vector<xyPair> * intersections(vectorLine l1, vectorLine l2, vector<xyPair> &res
         // 2. Two segments are collinear and intersecting (at multiple points)
         // 3. Two segments are strictly parallel (hence not intersecting)
         if ((q - p).cross(r) == 0) { // i.e., if two segments are collinear
-            // Check each discrete point on l2 to see whether it intersects with l1
-            // By iterating from <q> to <q> + <s> and check whether each point is reached by some <p> + t<r> 
-            // where t ∈ [0, 1].
+            // iterate through each point on l2 and check whether it is on l1.
             int gcd_xy = gcd(s.x, s.y);
             xyPair normalized_s (s.x / gcd_xy, s.y / gcd_xy);
 
@@ -192,27 +190,6 @@ map<xyPair, int> * getSol1(vector<vectorLine> &lines, map<xyPair, int> &overlaps
     return (&overlaps);
 }
 
-
-
-// Poverty edition that check in the most conserved fashion.
-// i.e., This one assumes lines to be either vertical or parallel (maybe collinear) with each other. 
-int getSol1Poverty(vector<vectorLine> &lines, vector<xyPair> &intersectingPoints) {
-    for (int i = 0; i < lines.size(); i++) {
-        for (int j = i + 1; j < lines.size(); j++) {
-            vectorLine l1 = lines[i];
-            vectorLine l2 = lines[j];
-            vector<xyPair> intersectionSet;
-            intersections(l1, l2, intersectionSet);
-            for (xyPair x : intersectionSet) {
-                if (find(intersectingPoints.begin(), intersectingPoints.end(), x) == intersectingPoints.end()) {
-                    intersectingPoints.push_back(x);
-                }
-            }
-        }
-    }
-    return (intersectingPoints.size());
-}
-
 void test() {
     vectorLine l1 = {xyPair (0, 9), xyPair (5, 9)};
     vectorLine l2 = {xyPair (8, 0), xyPair (0, 8)};
@@ -263,9 +240,9 @@ void test() {
 int main() {
     test();
     vector<vectorLine> parsedLines = parser("../resource/q5/input", true);
-    vector<xyPair> intersectingPoints;
-    int result = getSol1Poverty(parsedLines, intersectingPoints);
-    cout << result << endl;
+    map<xyPair, int> intersectingPoints;
+    getSol1(parsedLines, intersectingPoints);
+    cout << intersectingPoints.size() << endl;
     
     return 0;
 }
