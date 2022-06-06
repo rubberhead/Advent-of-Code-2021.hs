@@ -58,7 +58,7 @@ map<xyPoint, int> * parser(string filepath, map<xyPoint, int>& points, bool vert
 int main() {
     map<xyPoint, int> points;
     map<xyPoint, int> filtered;
-    parser("../resource/q5/input", points);
+    parser("../resource/q5/input", points); // add true param for sol1
     copy_if(points.begin(), points.end(), inserter(filtered, filtered.end()), 
         [](auto const& kv) {
             return (kv.second >= 2);
