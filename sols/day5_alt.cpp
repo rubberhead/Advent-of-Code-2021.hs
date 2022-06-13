@@ -1,5 +1,5 @@
 // Alternative solution that sacrifices space (and time, really) but is quite apparent
-// Linalg obv. does wonders for speed but it seems my linalg is actually bad... or maybe there's definition faults?
+// Linalg obv. does wonders for speed but it seems my linalg is actually bad... maybe there's definition faults?
 #include <iostream>
 #include <fstream>
 #include <vector>
