@@ -78,22 +78,70 @@ int getSol1(Connectivity& conversion, const unordered_set<string>& large_caves) 
     return counter;
 }
 
+int getSol2(Connectivity& conversion, const unordered_set<string>& large_caves) {
+    // Perform BFS from "start", keep track of available route choices
+    // If BFS finds "end", add to counter (which is to be returned)
+    int counter = 0;
+    queue<pair<vector<string>, bool>> fifo_paths; 
+    fifo_paths.push(pair<vector<string>, bool>({"start"}, true));
+    while (!fifo_paths.empty()) {
+        vector<string> currpath = fifo_paths.front().first;
+        bool extranode_flag = fifo_paths.front().second;
+        string lastnode = currpath[currpath.size() - 1];
+        fifo_paths.pop();
+
+        if (lastnode == "end") {
+            counter ++;
+        } else {
+            // otherwise, maybe a new path
+            for (string nextnode : conversion[lastnode]) {
+                if (nextnode == "start") {
+                    continue;
+                }
+                if (!extranode_flag) { // extra node not allowed
+                    if (find(large_caves.begin(), large_caves.end(), nextnode) != large_caves.end() || // nextnode a large cave
+                        find(currpath.begin(), currpath.end(), nextnode) == currpath.end()) { // or nextnode (as small node) not visited before
+                        vector<string> nextpath (currpath);
+                        nextpath.push_back(nextnode);
+                        fifo_paths.push(pair<vector<string>, bool>(nextpath, extranode_flag));
+                    }
+                } else {
+                    vector<string> nextpath (currpath);
+                    nextpath.push_back(nextnode);
+                    if (find(large_caves.begin(), large_caves.end(), nextnode) != large_caves.end() || // nextnode a large cave
+                        find(currpath.begin(), currpath.end(), nextnode) == currpath.end()) { // or nextnode (as small node) not visited before
+                        fifo_paths.push(pair<vector<string>, bool>(nextpath, true)); // still able to visit one extra small node
+                    } else {
+                        fifo_paths.push(pair<vector<string>, bool>(nextpath, false)); // nextnode already visited once before
+                    }
+
+                }
+            }
+        }
+    }
+
+    return counter;
+}
+
 void test() {
     auto kvpair = *(parser("../resource/q12/input_test"));
     auto connectivity = kvpair.first;
     auto large_caves = kvpair.second;
     assert(large_caves.size() == 1);
     assert(getSol1(connectivity, large_caves) == 10);
+    assert(getSol2(connectivity, large_caves) == 36);
 
     kvpair = *(parser("../resource/q12/input_test1"));
     connectivity = kvpair.first;
     large_caves = kvpair.second;
     assert(getSol1(connectivity, large_caves) == 19);
+    assert(getSol2(connectivity, large_caves) == 103);
 
     kvpair = *(parser("../resource/q12/input_test2"));
     connectivity = kvpair.first;
     large_caves = kvpair.second;
     assert(getSol1(connectivity, large_caves) == 226);
+    assert(getSol2(connectivity, large_caves) == 3509);
 }
 
 int main() {
@@ -104,6 +152,9 @@ int main() {
 
     // 1.
     cout << "Part 1: " << getSol1(connectivity, large_caves) << endl;
+
+    // 2.
+    cout << "Part 2: " << getSol2(connectivity, large_caves) << endl;
 
 
     return 0;
