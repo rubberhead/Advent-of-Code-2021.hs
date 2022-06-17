@@ -45,6 +45,7 @@
         "stdexcept": "cpp",
         "streambuf": "cpp",
         "typeinfo": "cpp",
-        "regex": "cpp"
+        "regex": "cpp",
+        "unordered_set": "cpp"
     }
 }
