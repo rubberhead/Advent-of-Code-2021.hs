@@ -7,6 +7,13 @@
 // 3. Get the disjunction of two subsets for the next fold cmd (either in-place 
 //    or with input set deleted from memory
 
+// std::set<T>::value_type is of T const type!
+// This implies that all args to lambda exp must be of const type and cannot be mutated. 
+// Makes sense considering how tricky and slow it would be to maintain set invariance during each mutation
+
+// Aw shit aw fuck
+// I think I misinterpreted the question and made the question a lot harder than it seems
+
 #include <iostream>
 #include <fstream>
 #include <sstream>
@@ -19,22 +26,48 @@
 #define toDigit(c) (c - '0')
 using namespace std;
 
-unique_ptr<set<pair<int, int>>> applyFoldCmd(set<pair<int, int>>& pts_before_cmd, const pair<char, int>& cmd) {
-    const char& direction = cmd.first;
-    const int& threshold = cmd.second;
-    unique_ptr<set<pair<int, int>>> pts_resultant (new set<pair<int, int>>());
+// Referred to stackoverflow Q.#7777827 (xtofl)
+struct x_cmp {
+    bool operator() (pair<int, int> a, pair<int, int> b) const {
+        return (a.first < b.first);
+    }
+};
+struct y_cmp {
+    bool operator() (pair<int, int> a, pair<int, int> b) const {
+        return (a.second < b.second);
+    }
+};
+struct xyset {
+    set<pair<int, int>, x_cmp> xidxs;
+    set<pair<int, int>, y_cmp> yidxs;
+
+    void insert(pair<int, int> p) {
+        xidxs.insert(p);
+        yidxs.insert(p);
+    }
+};
+
+unique_ptr<xyset> applyFoldCmd(xyset& pts_before_cmd, pair<char, int> const & cmd) {
+    char const & direction = cmd.first;
+    int const & threshold = cmd.second;
+    unique_ptr<xyset> pts_resultant (new xyset());
     if (direction == 'x') {
-        const auto split = find_if(pts_before_cmd.begin(), pts_before_cmd.end(), 
-            [&](pair<int, int>& xypair) {
+        // All elems after split in set (w/ x-based idx) must be folded up
+        auto split = find_if(pts_before_cmd.xidxs.begin(), pts_before_cmd.xidxs.end(), // O(n)
+            [&](pair<int, int> const & xypair) {
                 return (xypair.first > threshold);
             }
         );
-        for_each(split, pts_before_cmd.end(), 
-            [&](pair<int, int>& xypair) {
-                xypair.first = threshold - (xypair.first - threshold);
-                if (find(pts_before_cmd.begin(), split, xypair) != split) {
+        // All elems w/ x value before border must be within the return set
+        int border_after_fold = threshold - ((*(pts_before_cmd.xidxs.end() - 1)).first - threshold);
+        for
+        for_each(split, pts_before_cmd.xidxs.end(), // O(n^2)
+            [&](pair<int, int> const & xypair) {
+                int newfirst = threshold - (xypair.first - threshold);
+                pair<int, int> newpair (newfirst, xypair.second);
+                if (find(pts_before_cmd.xidxs.begin(), split, newpair) != split) {
                     // folded pt also in unmodified part of original set
-                    pts_resultant->insert(xypair);
+                    pts_resultant->insert(newpair);
                 } 
             }
         );
@@ -42,17 +75,18 @@ unique_ptr<set<pair<int, int>>> applyFoldCmd(set<pair<int, int>>& pts_before_cmd
     }
 
     if (direction == 'y') {
-        const auto split = find_if(pts_before_cmd.begin(), pts_before_cmd.end(), 
-            [&](pair<int, int>& xypair) {
+        auto split = find_if(pts_before_cmd.yidxs.begin(), pts_before_cmd.yidxs.end(), 
+            [&](pair<int, int> const & xypair) {
                 return (xypair.second > threshold);
             }
         );
-        for_each(split, pts_before_cmd.end(), 
-            [&](pair<int, int>& xypair) {
-                xypair.second = threshold - (xypair.second - threshold);
-                if (find(pts_before_cmd.begin(), split, xypair) != split) {
+        for_each(split, pts_before_cmd.yidxs.end(), 
+            [&](pair<int, int> const & xypair) {
+                int newsecond = threshold - (xypair.second - threshold);
+                pair<int, int> newpair (xypair.first, newsecond);
+                if (find(pts_before_cmd.yidxs.begin(), split, newpair) != split) {
                     // folded pt also in unmodified part of original set
-                    pts_resultant->insert(xypair);
+                    pts_resultant->insert(newpair);
                 } 
             }
         );
@@ -61,16 +95,16 @@ unique_ptr<set<pair<int, int>>> applyFoldCmd(set<pair<int, int>>& pts_before_cmd
 }
 
 // Assumes empty pts, cmds
-void parser(const string& filepath, set<pair<int, int>>& pts, vector<pair<char, int>>& cmds) {
+void parser(const string& filepath, xyset& pts, vector<pair<char, int>>& cmds) {
     ifstream inputf (filepath);
     string nextline;
     getline (inputf, nextline); // loaded first line (which should be points)
-    while (nextline != "") { // parse points
+    while (nextline != "\r") { // parse points
         stringstream nlstream (nextline);
         string x, y;
         getline (nlstream, x, ',');
         getline (nlstream, y);
-        pts.insert(stoi(x), stoi(y));
+        pts.insert(pair<int, int>(stoi(x), stoi(y)));
 
         getline (inputf, nextline);
     }
@@ -84,12 +118,11 @@ void parser(const string& filepath, set<pair<int, int>>& pts, vector<pair<char, 
 }
 
 void test() {
-    set<pair<int, int>> pts;
+    xyset pts;
     vector<pair<char, int>> cmds;
     parser("../resource/q13/input_test", pts, cmds);
 
-    assert(applyFoldCmd(pts, cmds[0])->size() == 17);
-
+    assert(applyFoldCmd(pts, cmds[0])->xidxs.size() == 17);
 }
 
 int main() {
