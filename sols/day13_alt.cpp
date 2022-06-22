@@ -128,7 +128,7 @@ void prettyPrint(xyset const& original_pts, vector<pair<char, int>> const& cmds)
             if (find(resultant_pts.xidxs.begin(), 
                      resultant_pts.xidxs.end(), 
                      pair<int, int>(i, j)) != resultant_pts.xidxs.end()) {
-                cout << "\u2588";
+                cout << "\u2588"; // █ character
             } else {
                 cout << '.';
             }
@@ -136,7 +136,6 @@ void prettyPrint(xyset const& original_pts, vector<pair<char, int>> const& cmds)
         cout << endl;
     }
 }
-
 
 void test() {
     xyset pts;
