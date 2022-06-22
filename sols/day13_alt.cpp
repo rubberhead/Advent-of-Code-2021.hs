@@ -13,16 +13,24 @@ using namespace std;
 
 // Referred to stackoverflow Q.#7777827 (xtofl)
 struct x_cmp {
-    bool operator() (pair<int, int> a, pair<int, int> b) const {
-        return (a.first <= b.first);
+    bool operator() (pair<int, int> const& a, pair<int, int> const& b) const {
+        if (a.first < b.first) { return true; } 
+        if (a.first == b.first) {
+            return (a.second < b.second);
+        }
+        return false;
     }
 };
 struct y_cmp {
-    bool operator() (pair<int, int> a, pair<int, int> b) const {
-        return (a.second <= b.second);
+    bool operator() (pair<int, int> const& a, pair<int, int> const& b) const {
+        if (a.second < b.second) { return true; }
+        if (a.second == b.second) {
+            return (a.first < b.first);
+        }
+        return false;
     }
 };
-struct xyset {
+struct xyset { // Improvement: xidxs and yidxs could store reference to item p
     set<pair<int, int>, x_cmp> xidxs;
     set<pair<int, int>, y_cmp> yidxs;
 
@@ -32,7 +40,7 @@ struct xyset {
     }
 };
 
-unique_ptr<xyset> applyFoldCmd(xyset& original_pts, pair<char, int> const& cmd) {
+unique_ptr<xyset> applyFoldCmd(xyset const& original_pts, pair<char, int> const& cmd) {
     char const& direction = cmd.first;
     int const& threshold = cmd.second;
     unique_ptr<xyset> resultant_pts_ptr (new xyset());
@@ -49,9 +57,7 @@ unique_ptr<xyset> applyFoldCmd(xyset& original_pts, pair<char, int> const& cmd) 
                     resultant_pts_ptr->insert(xypair);
                 } else if (xypair.first > threshold) { // comparator guarantees order of iteration
                     pair<int, int> newpair (xypair.first - (2 * (xypair.first - threshold)), xypair.second);
-                    if (find(original_pts.xidxs.begin(), original_pts.xidxs.end(), newpair) == original_pts.xidxs.end()){
-                        resultant_pts_ptr->insert(newpair);
-                    }
+                    resultant_pts_ptr->insert(newpair);
                 }
             }
         );
@@ -64,9 +70,7 @@ unique_ptr<xyset> applyFoldCmd(xyset& original_pts, pair<char, int> const& cmd) 
                     resultant_pts_ptr->insert(xypair);
                 } else if (xypair.second > threshold) {
                     pair<int, int> newpair (xypair.first, xypair.second - (2 * (xypair.second - threshold)));
-                    if (find(original_pts.yidxs.begin(), original_pts.yidxs.end(), newpair) == original_pts.yidxs.end()){
-                        resultant_pts_ptr->insert(newpair);
-                    }
+                    resultant_pts_ptr->insert(newpair);
                 }
             }
         ); 
@@ -103,6 +107,37 @@ void parser(const string& filepath, xyset& pts, vector<pair<char, int>>& cmds) {
     }
 }
 
+// getSol2
+void prettyPrint(xyset const& original_pts, vector<pair<char, int>> const& cmds) {
+    xyset resultant_pts = original_pts;
+    for_each(cmds.begin(), cmds.end(), 
+        [&](pair<char, int> const& cmd) {
+            resultant_pts = *(applyFoldCmd(resultant_pts, cmd));
+            // unique_ptr should handle deletion automatically?
+        }
+    );
+
+    assert(resultant_pts.xidxs.size() != 0);
+    // print
+    int col_min = resultant_pts.xidxs.begin()->first;
+    int col_max = resultant_pts.xidxs.rbegin()->first;
+    int row_min = resultant_pts.yidxs.begin()->second;
+    int row_max = resultant_pts.yidxs.rbegin()->second;
+    for (int j = row_min; j <= row_max; j++) {
+        for (int i = col_min; i <= col_max; i++) {
+            if (find(resultant_pts.xidxs.begin(), 
+                     resultant_pts.xidxs.end(), 
+                     pair<int, int>(i, j)) != resultant_pts.xidxs.end()) {
+                cout << "\u2588";
+            } else {
+                cout << '.';
+            }
+        }
+        cout << endl;
+    }
+}
+
+
 void test() {
     xyset pts;
     vector<pair<char, int>> cmds;
@@ -118,6 +153,10 @@ int main() {
     parser("../resource/q13/input", pts, cmds);
     // 1.
     cout << "Part 1: " << applyFoldCmd(pts, cmds[0])->xidxs.size() << endl;
+
+    // 2.
+    cout << "Part 2: " << endl;
+    prettyPrint(pts, cmds);
 
     return 0;
 }
