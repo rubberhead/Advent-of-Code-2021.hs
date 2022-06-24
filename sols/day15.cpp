@@ -4,6 +4,8 @@
 #include <iostream>
 #include <fstream>
 #include <vector>
+#include <queue>
+#include <set>
 #include <memory>
 #include <algorithm>
 #include <cassert>
@@ -44,22 +46,22 @@ int lowestRiskDP (vector<vector<int>> const& risks) {
 // O(1).
 unique_ptr<vector<pair<int, int>>> adjacents(pair<int, int> const& xypair, vector<vector<int>> const& risks) {
     int col_min = 0;
-    int col_max = risks[0].size() - 1;
+    int col_max = risks[0].size();
     int row_min = 0;
-    int row_max = risks.size() - 1;
+    int row_max = risks.size();
     int i = xypair.first;
     int j = xypair.second;
     vector<pair<int, int>> adjacent_indices;
     if (i > row_min) {
         adjacent_indices.push_back(pair<int, int>(i - 1, j));
     }
-    if (i < row_max) {
+    if (i + 1 < row_max) {
         adjacent_indices.push_back(pair<int, int>(i + 1, j));
     }
     if (j > col_min) {
         adjacent_indices.push_back(pair<int, int>(i, j - 1));
     }
-    if (j < col_max) {
+    if (j + 1 < col_max) {
         adjacent_indices.push_back(pair<int, int>(i, j + 1));
     }
     return (make_unique<vector<pair<int, int>>>(adjacent_indices));
@@ -74,54 +76,33 @@ int lowestRiskDijkstra (vector<vector<int>> const& risks) {
         vector<int>(risks[0].size(), INT32_MAX) // not INF!
     );
     dists[0][0] = 0;
-    // Initialize vector storing current fringe vertices (supposed to be max-heap)
-    vector<pair<int, int>> frontier ({pair<int, int>(0, 0)});
+    // Custom comparator lambda exp
+    // Use decltype when passed as type declaration in container creations
+    auto frontier_cmp = [&](pair<int, int> const& pair_a, pair<int, int> const& pair_b) {
+        if (dists[pair_a.first][pair_a.second] > dists[pair_b.first][pair_b.second]) {
+            return true;
+        }
+        return false;
+    };
+
+    // Initialize priority_queue storing current fringe vertices (supposed to be max-heap)
+    priority_queue<pair<int, int>, vector<pair<int, int>>, decltype(frontier_cmp)> frontier{frontier_cmp};
+    frontier.push(pair<int, int>(0, 0));
 
     // Update dist until graph traversed completely from [0][0]
     while (!frontier.empty()) {
-        pair<int, int> ijpair = frontier.back(); // returns min element
-        int& i = ijpair.first;
-        int& j = ijpair.second;
-        auto adjacents_to_ij = *(adjacents(ijpair, risks));
-        frontier.pop_back(); 
+        pair<int, int> ijpair = frontier.top(); // returns min element
+        int i = ijpair.first;
+        int j = ijpair.second;
+        auto adjacents_to_ij = *(adjacents(ijpair, risks)); // up, down, left, right at max
+        frontier.pop();
         for (auto& xypair : adjacents_to_ij) { // (i,j) -> (x,y)
             // RELAX subroutine
-            int& x = xypair.first;
-            int& y = xypair.second;
-            if (dists[x][y] == INT32_MAX) { // First time encountering (x,y)
+            int x = xypair.first;
+            int y = xypair.second;
+            if (dists[i][j] + risks[x][y] < dists[x][y]) { // Better route found that is (0,0) ~> (i,j) -> (x,y)
                 dists[x][y] = dists[i][j] + risks[x][y];
-                frontier.push_back(xypair);
-                push_heap(frontier.begin(), frontier.end(), 
-                    [&](pair<int, int> const& pair_a, pair<int, int> const& pair_b) {
-                        int x_a = pair_a.first; // Lambda closure allows for calling local variables
-                        int x_b = pair_b.first; // Maybe there are better ways?
-                        int y_a = pair_a.second;
-                        int y_b = pair_b.second;
-                        if (dists[x_a][y_a] < dists[x_b][y_b]) {
-                            return true;
-                        }
-                        return false;
-                    }
-                );
-            } 
-            if (dists[x][y] > dists[i][j] + risks[x][y]) { // Better route found for (0,0) ~> (i,j) -> (x,y)
-                dists[x][y] = dists[i][j] + risks[x][y];
-                // C++ STL has no heapify functionalities as defined in CLRS
-                // Alternative would be to delete and re-push (x,y) from frontier
-                // If done correctly that would be O(3log(n)), but reference to (x,y) in frontier is required somehow...
-                // Comparatively, make_heap runs in O(3n) time.
-                make_heap(frontier.begin(), frontier.end(), 
-                    [&](pair<int, int> const& pair_a, pair<int, int> const& pair_b) {
-                        int x_a = pair_a.first; 
-                        int x_b = pair_b.first; 
-                        int y_a = pair_a.second;
-                        int y_b = pair_b.second;
-                        if (dists[x_a][y_a] < dists[x_b][y_b]) {
-                            return true;
-                        }
-                        return false;
-                    }
-                );
+                frontier.push(xypair);
             }
         }
     }
@@ -170,7 +151,7 @@ int main() {
     vector<vector<int>> const risks = *(parser("../resource/q15/input"));
 
     // 1.
-    cout << "Part 1: " << lowestRiskDP(risks) << endl;
+    cout << "Part 1: " << lowestRiskDijkstra(risks) << endl;
 
     return 0;
 }
