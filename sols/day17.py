@@ -1,6 +1,5 @@
 # Part 2 only, Part 1 done in pen & paper method
 from pathlib import Path
-import functools
 import numpy as np
 
 def findDistinctVelocities(x_range: range, y_range: range) -> set:
@@ -39,7 +38,6 @@ def answerParser(filepath: Path) -> list:
     return result
 
 def test():
-    # checkIfVelocityHits
     test_result = findDistinctVelocities(range(20, 31), range(-10, -4))
     test_answer = set(answerParser(Path.cwd().joinpath("resource/q17/input_test")))
     print (test_answer.difference(test_result))
