@@ -17,13 +17,13 @@ struct SnailNumber { // largely followed code structure from Simon Toth's blog
     SnailNumber(SnailNumber &&) = default;
     SnailNumber& operator = (SnailNumber &&) = default;
 
-    SnailNumber(unique_ptr<SnailNumber>& _parent_ptr) {
-        parentSN = make_unique<SnailNumber>(*_parent_ptr);
+    SnailNumber(SnailNumber* _parent_ptr) {
+        parentSN = unique_ptr<SnailNumber>(&*_parent_ptr);
     }
 
     SnailNumber(int _regularData, unique_ptr<SnailNumber>& _parent_ptr) {
         regularData = _regularData;
-        parentSN = make_unique<SnailNumber>(*_parent_ptr);
+        parentSN = unique_ptr<SnailNumber>(&*_parent_ptr);
     }
 
     SnailNumber(SnailNumber const& other){
@@ -37,16 +37,16 @@ struct SnailNumber { // largely followed code structure from Simon Toth's blog
 istream& operator >> (istream& is, SnailNumber &sn) {
     char nextChar;
     is >> nextChar; // which should be [
-    sn.leftSN = make_unique<SnailNumber>(make_unique<SnailNumber>(sn));
+    sn.leftSN = make_unique<SnailNumber>(&sn);
     if (is.peek() == '[') {
-        is >> *sn.leftSN; // deepen @ left
+        is >> *(sn.leftSN); // deepen @ left
     } else {
-        int leftValue;
+        int leftValue;  
         is >> leftValue;
         sn.leftSN->regularData = leftValue;
     }
     is >> nextChar; // which should be ,
-    sn.rightSN = make_unique<SnailNumber>(make_unique<SnailNumber>(sn));
+    sn.rightSN = make_unique<SnailNumber>(&sn);
     if (is.peek() == '[') {
         is >> *sn.rightSN; // deepen @ right
     } else {
@@ -79,66 +79,104 @@ SnailNumber operator + (SnailNumber& lhs, SnailNumber& rhs) {
     return new_parent;
 }
 
-SnailNumber reduce (SnailNumber& top_sn) {
-
-}
-
-// explode on leftmost base subtree (i.e., a non-regular node w/ left, right as regular number)
-// when curr_sn is given at top-depth, depth = 1 (here depth is relative to entire tree)
-bool explode (SnailNumber& curr_sn, int depth = 1) {
-    bool flag = false;
-    if (!curr_sn.leftSN->regularData.has_value()) { // left has subtree
-        flag = (explode(*curr_sn.leftSN, depth + 1)); // expand on left subtree
-    }
-    if (!curr_sn.rightSN->regularData.has_value()) { // right has subtree
-        flag = (explode(*curr_sn.rightSN, depth + 1)); // expand on right subtree
-    }
-    if (depth > 4) {
-        SnailNumber parent_sn = *curr_sn.parentSN;
-        
-    } else {
-        return flag;
-    }
-}
-
-// 
+// Helper function: find most 
 unique_ptr<SnailNumber> findMostAdjacentOnLorR (SnailNumber& curr_sn, char L_OR_R) {
-    if (L_OR_R == 'L') { // explode left subtree, find adjacent left node
-        SnailNumber temp_parent = curr_sn.parentSN;
-        while (temp_parent.parentSN->leftSN == make_unique<SnailNumber>(temp_parent)) {
-            temp_parent = temp_parent.parentSN;
+    if (L_OR_R == 'L') { // to explode left subtree, find adjacent left node
+        SnailNumber* temp_parent = &curr_sn;
+        while (temp_parent->parentSN->leftSN.get() == temp_parent) { 
+            temp_parent = temp_parent->parentSN.get(); // backtrack up the tree until temp_parent is on the right to ITS parent
+            if (temp_parent->parentSN == nullptr) { // when backtracked to top node
+                return nullptr; // curr_sn is already leftmost leaf in the tree, return nullptr
+            }
         }
-        temp_parent = temp_parent.parentSN;
-        SnailNumber findFrom = temp_parent.leftSN;
-        while (!findFrom.regularData.has_value()) {
-            findFrom = findFrom.rightSN;
+        temp_parent = temp_parent->parentSN.get();
+        SnailNumber* findFrom = temp_parent->leftSN.get();
+        while (!findFrom->regularData.has_value()) { // then, get the rightmost RN on temp_parent.parentSN's left branch
+            findFrom = findFrom->rightSN.get();
         }
-        return (make_unique<SnailNumber>(findFrom));
-    } else if (L_OR_R == 'R') { // explode right subtree, find adjacent right node
-        SnailNumber temp_parent = curr_sn.parentSN;
-        while (temp_parent.parentSN->rightSN == make_unique<SnailNumber>(temp_parent)) {
-            temp_parent = temp_parent.parentSN;
+        return (unique_ptr<SnailNumber>(findFrom));
+    } else if (L_OR_R == 'R') { // to explode right subtree, find adjacent right node
+        SnailNumber* temp_parent = &curr_sn;
+        while (temp_parent->parentSN->rightSN.get() == temp_parent) { 
+            temp_parent = temp_parent->parentSN.get(); // backtrack up the tree until temp_parent is on the left to ITS parent
+            if (temp_parent->parentSN == nullptr) { // when backtracked to top node
+                return nullptr; // curr_sn is already rightmost leaf in the tree, return nullptr
+            }
         }
-        temp_parent = temp_parent.parentSN;
-        SnailNumber findFrom = temp_parent.rightSN;
-        while (!findFrom.regularData.has_value()) {
-            findFrom = findFrom.leftSN;
+        temp_parent = temp_parent->parentSN.get();
+        SnailNumber* findFrom = temp_parent->rightSN.get();
+        while (!findFrom->regularData.has_value()) { // then, get the rightmost RN on temp_parent.parentSN's left branch
+            findFrom = findFrom->leftSN.get();
         }
-        return (make_unique<SnailNumber>(findFrom));
+        return (unique_ptr<SnailNumber>(findFrom));
     } else {
         throw (invalid_argument("L_OR_R takes one of 'L' or 'R'"));
     }
 }
 
+// explode on leftmost base subtree (i.e., a non-regular node w/ left, right as regular number)
+// when curr_sn is given at top-depth, depth = 1 (here depth is relative to entire tree)
+// Looks slow... Exponential to tree depth
+bool explode (SnailNumber& curr_sn, int depth = 1) {
+    bool flag = false;
+    if (!curr_sn.leftSN->regularData.has_value()) { // check left has subtree
+        flag = (explode(*curr_sn.leftSN, depth + 1)); // expand on left subtree
+    }
+    if (!flag && !curr_sn.rightSN->regularData.has_value()) { // left has no subtree, check right has subtree
+        flag = (explode(*curr_sn.rightSN, depth + 1)); // expand on right subtree
+    }
+    if (depth > 4) { // reg number on left and right of curr_sn, correct depth
+        SnailNumber* parent_sn = curr_sn.parentSN.get();
+        if (parent_sn->leftSN.get() == &curr_sn || 
+            parent_sn->rightSN.get() == &curr_sn) { // curr_sn as left or right member of its parent
+            // change adjacent left, then right regular SN (if exists)
+            unique_ptr<SnailNumber> adj_leftRN = findMostAdjacentOnLorR(curr_sn, 'L'); // nullptr if curr_sn is already leftmost in the tree
+            if (adj_leftRN != nullptr) { // if not leftmost, change adjacent left 
+                adj_leftRN->regularData = adj_leftRN->regularData.value() + curr_sn.leftSN->regularData.value();
+            } 
+            unique_ptr<SnailNumber> adj_rightRN = findMostAdjacentOnLorR(curr_sn, 'R'); // likewise, nullptr if curr_sn is already rightmost in the tree
+            if (adj_rightRN != nullptr) { // if not rightmost, change adjacent right
+                adj_rightRN->regularData = adj_rightRN->regularData.value() + curr_sn.rightSN->regularData.value();
+            }
+            // change data of curr_sn itself
+            curr_sn.regularData = 0;
+            curr_sn.leftSN.reset();
+            curr_sn.rightSN.reset();
+        } else {
+            throw runtime_error("curr_sn not on left nor right of its parent.");
+        }
+        flag = true;
+        return flag;
+    } else {
+        return flag;
+    }
+}
+
+
+/*
+SnailNumber reduce (SnailNumber& top_sn) {
+
+}*/
 
 void test() {
+    // struct io
     stringstream test_1 ("[1,1]");
     SnailNumber test_sn;
     test_1 >> test_sn;
     cout << test_sn << endl;
+
+    SnailNumber test_sn_2;
     stringstream test_2 ("[[[[[9,8],1],2],3],4]");
-    test_2 >> test_sn;
-    cout << test_sn << endl;
+    test_2 >> test_sn_2;
+    cout << test_sn_2 << endl;
+
+    // explode
+    SnailNumber test_sn_3;
+    stringstream test_3 ("[[[[[9,8],1],2],3],4]");
+    test_3 >> test_sn_3;
+    bool flag = explode(test_sn_3, 1);
+    cout << test_sn_3 << endl;
+    assert(flag == true);
 }
 
 int main() {
