@@ -1,3 +1,4 @@
+// Basically same as day18.cpp but rewritten in C-style pointers. Couldn't handle them
 #include <iostream>
 #include <sstream>
 #include <memory>
@@ -159,20 +160,46 @@ bool explode(SNTreeNode& curr_sn, int depth = 1) {
 
 bool split(SNTreeNode& curr_sn) {
     bool flag = false;
-    if (!curr_sn.left->isTerminal()) {
+    if (!curr_sn.isTerminal()) {
         flag = split(*curr_sn.left);
+        if (!flag) {
+            flag = split(*curr_sn.right);
+        }
     }
-    if (!flag && !curr_sn.right->isTerminal()) {
-        flag = split(*curr_sn.right);
+    
+    if (curr_sn.data.value_or(-1) > 9) {
+        int data = curr_sn.data.value();
+        curr_sn.left = new SNTreeNode(data / 2, &curr_sn);
+        curr_sn.right = new SNTreeNode((data + 1) / 2, &curr_sn);
+        curr_sn.data = nullopt;
+        flag = true;
+        return flag;
+    } else {
+        return flag;
     }
+}
 
-    if (curr_sn.left->data.value() > 9) { // left case
-        int data = curr_sn.left->data.value();
-        curr_sn.left->left = new SNTreeNode(data/2, &curr_sn);
+void reduce(SNTreeNode& curr_sn) {
+    bool flag = false;
+    do {
+        flag = explode(curr_sn, 1);
+        if (!flag) {
+            flag = split(curr_sn);
+        }
+    } while (flag);
+}
 
-    } else if (curr_sn.right->data.value() > 9) { // right case
-
+SNTreeNode&& operator + (SNTreeNode& lhs, SNTreeNode& rhs) {
+    if (lhs.parent != nullptr || rhs.parent != nullptr) {
+        throw (invalid_argument("LHS/RHS of + operator need to not be subtrees"));
     }
+    SNTreeNode new_parent;
+    lhs.parent = &new_parent;
+    new_parent.left = &lhs;
+    rhs.parent = &new_parent;
+    new_parent.right = &rhs;
+    reduce(new_parent);
+    return (move(new_parent));
 }
 
 void test() {
@@ -213,7 +240,32 @@ void test() {
     }
 
     // split
+    SNTreeNode test_sn_6;
+    stringstream test_6 ("[[[[0,7],4],[15,[0,13]]],[1,1]]");
+    test_6 >> test_sn_6;
+    flag = split(test_sn_6);
+    cout << test_sn_6 << endl;
+    assert(flag == true);
+
+    // reduce
+    SNTreeNode test_sn_7;
+    stringstream test_7 ("[[[[[4,3],4],4],[7,[[8,4],9]]],[1,1]]");
+    test_7 >> test_sn_7;
+    reduce(test_sn_7);
+    cout << test_sn_7 << endl;
     
+    // plus
+    SNTreeNode test_sn_lhs, test_sn_rhs;
+    stringstream test_lhs ("[[1,1],9]");
+    stringstream test_rhs ("[[2,2],[3,4]]");
+    test_lhs >> test_sn_lhs;
+    test_rhs >> test_sn_rhs;
+    SNTreeNode result = test_sn_lhs + test_sn_rhs;
+    cout << result << endl;
+
+    // recurrent plus from file input
+
+    // magnitude
 }
 
 int main() {
