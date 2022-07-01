@@ -152,12 +152,6 @@ bool explode (SnailNumber& curr_sn, int depth = 1) {
     }
 }
 
-
-/*
-SnailNumber reduce (SnailNumber& top_sn) {
-
-}*/
-
 void test() {
     // struct io
     stringstream test_1 ("[1,1]");

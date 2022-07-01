@@ -1,8 +1,15 @@
 // Basically same as day18.cpp but rewritten in C-style pointers. Couldn't handle them
+// Simon Toth's blog has been a huge help - I wasn't quite understanding of how to write custom data structures in C++ 
+// so his code was of remarkable referential quality.
 #include <iostream>
 #include <sstream>
+#include <fstream>
+#include <vector>
+#include <tuple>
 #include <memory>
 #include <optional>
+#include <algorithm>
+#include <numeric>
 #include <cassert>
 using namespace std;
 
@@ -26,14 +33,27 @@ struct SNTreeNode {
     }
 
     SNTreeNode(SNTreeNode const& other) { // copy
-        left = &*other.left;
-        right = &*other.right;
-        parent = &*other.parent;
-        data = make_optional<int>(other.data.value());
+        if (other.isTerminal()) {
+            return;
+        }
+        left = other.left != nullptr ? new SNTreeNode(*other.left) : nullptr;
+        right = other.right != nullptr ? new SNTreeNode(*other.right) : nullptr;
+        parent = other.parent != nullptr ? new SNTreeNode(*other.parent) : nullptr;
     }
 
     bool isTerminal() const {
         return (left == nullptr && right == nullptr);
+    }
+
+    bool isUninitialized() const {
+        return (this->isTerminal() && parent == nullptr && !data.has_value());
+    }
+
+    operator int() const {
+        if (this->isTerminal()) {
+            return this->data.value_or(-1);
+        }
+        return 3 * static_cast<int>(*this->left) + 2 * static_cast<int>(*this->right);
     }
 };
 
@@ -85,7 +105,7 @@ ostream& operator << (ostream& os, SNTreeNode const& curr_top) {
         os << curr_top.data.value_or(-1);
         return os;
     }
-    os << "[" << *(curr_top.left) << ", " << *(curr_top.right) << "]";
+    os << "[" << *(curr_top.left) << "," << *(curr_top.right) << "]";
     return os;
 }
 
@@ -193,16 +213,47 @@ SNTreeNode&& operator + (SNTreeNode& lhs, SNTreeNode& rhs) {
     if (lhs.parent != nullptr || rhs.parent != nullptr) {
         throw (invalid_argument("LHS/RHS of + operator need to not be subtrees"));
     }
-    SNTreeNode new_parent;
-    lhs.parent = &new_parent;
-    new_parent.left = &lhs;
-    rhs.parent = &new_parent;
-    new_parent.right = &rhs;
-    reduce(new_parent);
-    return (move(new_parent));
+    if (lhs.isUninitialized()) {
+        return (move(rhs));
+    }
+    if (rhs.isUninitialized()) {
+        return (move(lhs));
+    }
+    // otherwise, both are initialized
+    SNTreeNode* new_parent = new SNTreeNode();
+    lhs.parent = new_parent;
+    new_parent->left = &lhs;
+    rhs.parent = new_parent;
+    new_parent->right = &rhs;
+    reduce(*new_parent);
+    return (move(*new_parent));
+}
+
+// EXTREMELY hack-y way of performing recursive plus actions
+// likely very costly, mostly due to NOT utilizing the copy constructor but instead 
+// utilizing chained calls to >> and << operators.
+// why? -- I was not familiar with how to change the memory location pointed to by a reference 
+// through rvalue returns. I must have tried pointers as well but iirc they don't 
+// work as I intended too either. idk i'm just not good enough
+SNTreeNode&& recursivePlus(SNTreeNode&& first_sn, istream& curr_in) {
+    if (curr_in.peek() == EOF) {
+        cout << "SUM: " << first_sn << endl;
+        return(move(first_sn));
+    }
+    string nextline;
+    getline(curr_in, nextline);
+    stringstream nls (nextline);
+    SNTreeNode rhs;
+    nls >> rhs;
+    stringstream result;
+    result << (first_sn + rhs);
+    SNTreeNode next;
+    result >> next;
+    return(recursivePlus(move(next), curr_in));
 }
 
 void test() {
+    /*
     // struct io
     stringstream test_1 ("[1,1]");
     SNTreeNode test_sn_1;
@@ -252,23 +303,50 @@ void test() {
     stringstream test_7 ("[[[[[4,3],4],4],[7,[[8,4],9]]],[1,1]]");
     test_7 >> test_sn_7;
     reduce(test_sn_7);
-    cout << test_sn_7 << endl;
+    cout << test_sn_7 << endl; */
     
     // plus
     SNTreeNode test_sn_lhs, test_sn_rhs;
-    stringstream test_lhs ("[[1,1],9]");
-    stringstream test_rhs ("[[2,2],[3,4]]");
+    stringstream test_lhs ("[[[[9,7],[7,8]],[[8,8],[0,8]]],[[[8,8],[9,9]],[[0,7],6]]]");
+    stringstream test_rhs ("[[[8,5],[[0,0],[4,9]]],[2,8]]");
     test_lhs >> test_sn_lhs;
     test_rhs >> test_sn_rhs;
     SNTreeNode result = test_sn_lhs + test_sn_rhs;
     cout << result << endl;
 
-    // recurrent plus from file input
+    /*
+    // plus on uninitialized
+    test_sn_lhs = SNTreeNode();
+    test_sn_rhs = SNTreeNode();
+    test_rhs = stringstream("[6,[9,8]]");
+    test_rhs >> test_sn_rhs;
+    result = test_sn_lhs + test_sn_rhs;
+    cout << result << endl; */
 
+    // recurrent plus from file input
+    ifstream inputf ("../resource/q18/input_test");
+    SNTreeNode sum = recursivePlus(move(SNTreeNode()), inputf);
     // magnitude
+    cout << "has magnitude: " << static_cast<int>(sum) << endl;
+
 }
 
 int main() {
     test();
+
+    // 1.
+    ifstream inputf ("../resource/q18/input");
+    cout << "Part 1: " << endl;
+    SNTreeNode sum = recursivePlus(move(SNTreeNode()), inputf);
+    cout << "has magnitude: " << static_cast<int>(sum) << endl;
+
+    // 2.
+    cout << "Part 2: " << endl;
+    int max = 0;
+    inputf = ifstream("../resource/q18/input");
+    // ... 
+
+
+
     return 0;
 }
