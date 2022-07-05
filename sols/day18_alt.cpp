@@ -232,9 +232,9 @@ SNTreeNode&& operator + (SNTreeNode& lhs, SNTreeNode& rhs) {
 // EXTREMELY hack-y way of performing recursive plus actions
 // likely very costly, mostly due to NOT utilizing the copy constructor but instead 
 // utilizing chained calls to >> and << operators.
-// why? -- I was not familiar with how to change the memory location pointed to by a reference 
-// through rvalue returns. I must have tried pointers as well but iirc they don't 
-// work as I intended too either. idk i'm just not good enough
+// why? -- I was not familiar with how to change the memory location pointed to by an 
+// (lvalue) reference through rvalue returns. I must have tried pointers as well 
+// but iirc they don't work as I intended too either. idk i'm just not good enough
 SNTreeNode&& recursivePlus(SNTreeNode&& first_sn, istream& curr_in) {
     if (curr_in.peek() == EOF) {
         cout << "SUM: " << first_sn << endl;

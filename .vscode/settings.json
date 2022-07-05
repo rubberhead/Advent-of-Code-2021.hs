@@ -47,6 +47,8 @@
         "typeinfo": "cpp",
         "regex": "cpp",
         "unordered_set": "cpp",
-        "queue": "cpp"
+        "queue": "cpp",
+        "map": "cpp",
+        "set": "cpp"
     }
 }
