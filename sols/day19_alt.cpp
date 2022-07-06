@@ -102,7 +102,7 @@ const array<Matrix_3d, 24> ORIENTATIONS = {
         Vector_3d{-1, 0, 0}, 
         Vector_3d{ 0, 1, 0}, 
         Vector_3d{ 0, 0, 1}
-    }, , 
+    }, 
     Matrix_3d{ // facing -x, -y+z
         Vector_3d{-1, 0, 0}, 
         Vector_3d{0, -1, 0}, 
@@ -172,12 +172,27 @@ struct Scanner {
 
     friend istream& operator >> (istream&, Scanner&);
 
-    int64_t checkOverlapCount(Scanner& other) {
-        // ?
+    vector<vector<Vector_3d>>&& getCoordinateVariations() {
+        vector<vector<Vector_3d>> results;
+        results.push_back(this->beacon_detections);
+        int idx = 0;
+        for_each(ORIENTATIONS.begin() + 1, ORIENTATIONS.end(), // begin() -> Identity matrix
+            [&](const Matrix_3d& trans) {
+                results.push_back({});
+                idx++;
+                for (const Vector_3d& vec : beacon_detections) {
+                    results[idx].push_back(*mult(vec, trans));
+                }
+            }
+        );
+        return (move(results));
     }
+
+    
 };
 
 // read "x,y,z" rows until line break, return read istream
+// at input in should be aligned BEFORE the first x,y,z row (e.g., at the "---" row)
 istream& operator >> (istream& in, Scanner& scanner) {
     string nextline;
     while (in.peek() != EOF) {
@@ -198,6 +213,24 @@ istream& operator >> (istream& in, Scanner& scanner) {
     return in; // @ new scanner line or EOF
 }
 
+vector<unique_ptr<Scanner>> parser(const string& filepath) {
+    ifstream inputf (filepath);
+    string nextline;
+    vector<unique_ptr<Scanner>> results;
+    while (inputf.peek() != EOF) {
+        getline(inputf, nextline);
+        if (nextline.substr(0, 3) == "---") { // new scanner
+            Scanner next_scanner;
+            inputf >> next_scanner;
+            results.push_back(make_unique<Scanner>(move(next_scanner))); // move
+            continue;
+        } else { // error: 
+            throw (runtime_error("Invalid istream alignment: x,y,z tuple not read by >> operator."));
+        }
+    }
+    return results;
+}
+
 void test() {
     // vector-matrix multiplication
     Vector_3d test_vec {1, 2, 3};
@@ -215,7 +248,9 @@ void test() {
     Vector_3d result = *mult(test_vec, test_mat);
     assert(result == (Vector_3d{-1, 3, -2}));
 
-    
+    // parser, >>
+    auto parsed = parser("../resource/q19/input");
+    assert(parsed.size() == 30);
     
 }
 
