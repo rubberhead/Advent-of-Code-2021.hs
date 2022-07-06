@@ -1,9 +1,10 @@
 #include <array>
 #include <vector>
-#include <set>
 #include <memory>
 #include <algorithm>
 #include <cassert>
+#include <iostream>
+#include <fstream>
 using namespace std;
 // try multithreading in this one, use #include <thread>
 
@@ -21,199 +22,180 @@ unique_ptr<Vector_3d> mult(const Vector_3d& orig, const Matrix_3d& transformatio
     return (move(result_ptr));
 }
 
-const vector<Matrix_3d> ROTATION_MATRICES_AROUND_X = {
-    Matrix_3d{ // R_x_0
+Vector_3d&& operator + (Vector_3d& lhs, Vector_3d& rhs) {
+    return (Vector_3d{lhs[0] + rhs[0], lhs[1] + rhs[1], lhs[2] + rhs[2]});
+}
+
+Vector_3d&& operator - (Vector_3d& lhs, Vector_3d& rhs) {
+    return (Vector_3d{lhs[0] - rhs[0], lhs[1] - rhs[1], lhs[2] - rhs[2]});
+}
+
+const array<Matrix_3d, 24> ORIENTATIONS = {
+    // facing +x -----------------------------------------------
+    Matrix_3d{ // facing +x, +y+z -> rotate 4 times around x
         Vector_3d{1, 0, 0}, 
         Vector_3d{0, 1, 0}, 
         Vector_3d{0, 0, 1}
     }, 
-    Matrix_3d{ // R_x_90
+    Matrix_3d{ // facing +x, -y+z
         Vector_3d{1, 0, 0}, 
-        Vector_3d{0, 0,-1}, 
-        Vector_3d{0, 1, 0}
-    }, 
-    Matrix_3d{ // R_x_180
+        Vector_3d{0,-1, 0}, 
+        Vector_3d{0, 0, 1}
+    },
+    Matrix_3d{ // facing +x, +y-z
+        Vector_3d{1, 0, 0}, 
+        Vector_3d{0, 1, 0}, 
+        Vector_3d{0, 0,-1}
+    },
+    Matrix_3d{ // facing +x, -y-z
         Vector_3d{1, 0, 0}, 
         Vector_3d{0,-1, 0}, 
         Vector_3d{0, 0,-1}
-    }, 
-    Matrix_3d{ // R_x_270
-        Vector_3d{1, 0, 0}, 
-        Vector_3d{0, 0, 1}, 
-        Vector_3d{0,-1, 0}
-    }
-};
+    },
 
-const vector<Matrix_3d> ROTATION_MATRICES_AROUND_Y = {
-    Matrix_3d{ // R_y_0
-        Vector_3d{1, 0, 0}, 
+    // facing +y ------------------------------------------------
+    Matrix_3d{ // facing +y, +x+z -> rotate 4 times around y
         Vector_3d{0, 1, 0}, 
+        Vector_3d{1, 0, 0}, 
         Vector_3d{0, 0, 1}
     }, 
-    Matrix_3d{ // R_y_90
-        Vector_3d{0,  0, 1}, 
-        Vector_3d{0,  1, 0}, 
-        Vector_3d{-1, 0, 0}
+    Matrix_3d{ // facing +y, -x+z
+        Vector_3d{ 0, 1, 0}, 
+        Vector_3d{-1, 0, 0}, 
+        Vector_3d{ 0, 0, 1}
     }, 
-    Matrix_3d{ // R_y_180
+    Matrix_3d{ // facing +y, +x-z
+        Vector_3d{0, 1, 0}, 
+        Vector_3d{1, 0, 0}, 
+        Vector_3d{0, 0,-1}
+    },
+    Matrix_3d{ // facing +y, -x-z
+        Vector_3d{ 0, 1, 0}, 
+        Vector_3d{-1, 0, 0}, 
+        Vector_3d{ 0, 0,-1}
+    },
+
+    // facing +z -----------------------------------------------
+    Matrix_3d{ // facing +z, +x+y -> rotate 4 times around z
+        Vector_3d{0, 0, 1}, 
+        Vector_3d{1, 0, 0}, 
+        Vector_3d{0, 1, 0}
+    },
+    Matrix_3d{ // facing +z, -x+y
+        Vector_3d{ 0, 0, 1}, 
+        Vector_3d{-1, 0, 0}, 
+        Vector_3d{ 0, 1, 0}
+    },
+    Matrix_3d{ // facing +z, +x-y
+        Vector_3d{0, 0, 1}, 
+        Vector_3d{1, 0, 0}, 
+        Vector_3d{0,-1, 0}
+    },
+    Matrix_3d{ // facing +z, -x-y
+        Vector_3d{ 0, 0, 1}, 
+        Vector_3d{-1, 0, 0}, 
+        Vector_3d{ 0,-1, 0}
+    },
+
+    // facing -x -----------------------------------------------
+    Matrix_3d{ // facing -x, +y+z -> rotate 4 times around x
+        Vector_3d{-1, 0, 0}, 
+        Vector_3d{ 0, 1, 0}, 
+        Vector_3d{ 0, 0, 1}
+    }, , 
+    Matrix_3d{ // facing -x, -y+z
+        Vector_3d{-1, 0, 0}, 
+        Vector_3d{0, -1, 0}, 
+        Vector_3d{0,  0, 1}
+    },
+    Matrix_3d{ // facing -x, +y-z
         Vector_3d{-1, 0, 0}, 
         Vector_3d{0,  1, 0}, 
         Vector_3d{0,  0,-1}
-    }, 
-    Matrix_3d{ // R_y_270
-        Vector_3d{0, 0,-1}, 
-        Vector_3d{0, 1, 0}, 
-        Vector_3d{1, 0, 0}
-    }
-};
+    },
+    Matrix_3d{ // facing -x, -y-z
+        Vector_3d{-1, 0, 0}, 
+        Vector_3d{0, -1, 0}, 
+        Vector_3d{0,  0,-1}
+    },
 
-const vector<Matrix_3d> ROTATION_MATRICES_AROUND_Z = {
-    Matrix_3d{ // R_z_0
-        Vector_3d{1, 0, 0}, 
-        Vector_3d{0, 1, 0}, 
-        Vector_3d{0, 0, 1}
-    }, 
-    Matrix_3d{ // R_z_90
+    // facing -y ----------------------------------------------
+    Matrix_3d{ // facing -y, +x+z -> rotate 4 times around y
         Vector_3d{0,-1, 0}, 
         Vector_3d{1, 0, 0}, 
         Vector_3d{0, 0, 1}
     }, 
-    Matrix_3d{ // R_z_180
+    Matrix_3d{ // facing -y, -x+z
+        Vector_3d{ 0,-1, 0}, 
         Vector_3d{-1, 0, 0}, 
-        Vector_3d{0, -1, 0}, 
-        Vector_3d{0,  0, 1}
+        Vector_3d{ 0, 0, 1}
     }, 
-    Matrix_3d{ // R_z_270
-        Vector_3d{0,  1, 0}, 
+    Matrix_3d{ // facing -y, +x-z
+        Vector_3d{0,-1, 0}, 
+        Vector_3d{1, 0, 0}, 
+        Vector_3d{0, 0,-1}
+    },
+    Matrix_3d{ // facing -y, -x-z
+        Vector_3d{ 0,-1, 0}, 
         Vector_3d{-1, 0, 0}, 
-        Vector_3d{0,  0, 1}
+        Vector_3d{ 0, 0,-1}
+    },
+
+    // facing -z ---------------------------------------------
+    Matrix_3d{ // facing -z, +x+y -> rotate 4 times around z
+        Vector_3d{0, 0,-1}, 
+        Vector_3d{1, 0, 0}, 
+        Vector_3d{0, 1, 0}
+    }, 
+    Matrix_3d{ // facing -z, -x+y
+        Vector_3d{ 0, 0,-1}, 
+        Vector_3d{-1, 0, 0}, 
+        Vector_3d{ 0, 1, 0}
+    },
+    Matrix_3d{ // facing -z, +x-y
+        Vector_3d{0, 0,-1}, 
+        Vector_3d{1, 0, 0}, 
+        Vector_3d{0,-1, 0}
+    },
+    Matrix_3d{ // facing -z, -x-y
+        Vector_3d{ 0, 0,-1}, 
+        Vector_3d{-1, 0, 0}, 
+        Vector_3d{ 0,-1, 0}
     }
 };
 
-unique_ptr<vector<Matrix_3d>> flipXHeading (const vector<Matrix_3d>& matrices) {
-    auto results_ptr = make_unique<vector<Matrix_3d>>(matrices);
-    for_each(results_ptr->begin(), results_ptr->end(), 
-        [](Matrix_3d& this_mat) {
-            for (int i = 0; i < DIMENSIONS; i++) {
-                for (int j = 0; j < DIMENSIONS; j++) {
-                    if (j == 0 && this_mat[i][j] != 0) {
-                        this_mat[i][j] *= -1;
-                    }
-                }
-            }
-        }
-    );
-    return results_ptr;
-}
+struct Scanner {
+    vector<Vector_3d> beacon_detections; // coordinates relative to *this* beacon
 
-unique_ptr<vector<Matrix_3d>> flipYHeading (const vector<Matrix_3d>& matrices) {
-    auto results_ptr = make_unique<vector<Matrix_3d>>(matrices);
-    for_each(results_ptr->begin(), results_ptr->end(), 
-        [](Matrix_3d& this_mat) {
-            for (int i = 0; i < DIMENSIONS; i++) {
-                for (int j = 0; j < DIMENSIONS; j++) {
-                    if (j == 1 && this_mat[i][j] != 0) {
-                        this_mat[i][j] *= -1;
-                    }
-                }
-            }
-        }
-    );
-    return results_ptr;
-}
+    Scanner() = default;
+    Scanner(Scanner&&) = default;
 
-unique_ptr<vector<Matrix_3d>> flipZHeading (const vector<Matrix_3d>& matrices) {
-    auto results_ptr = make_unique<vector<Matrix_3d>>(matrices);
-    for_each(results_ptr->begin(), results_ptr->end(), 
-        [](Matrix_3d& this_mat) {
-            for (int i = 0; i < DIMENSIONS; i++) {
-                for (int j = 0; j < DIMENSIONS; j++) {
-                    if (j == 2 && this_mat[i][j] != 0) {
-                        this_mat[i][j] *= -1;
-                    }
-                }
-            }
-        }
-    );
-    return results_ptr;
-}
+    friend istream& operator >> (istream&, Scanner&);
 
-unique_ptr<vector<Matrix_3d>> invert (const vector<Matrix_3d>& matrices) {
-    auto results_ptr = make_unique<vector<Matrix_3d>>(matrices);
-    for_each(results_ptr->begin(), results_ptr->end(), 
-        [](Matrix_3d& this_mat) {
-            for (int i = 0; i < DIMENSIONS; i++) {
-                for (int j = 0; j < DIMENSIONS; j++) {
-                    this_mat[i][j] *= -1;
-                }
-            }
-        }
-    );
-    return results_ptr;
-}
+    int64_t checkOverlapCount(Scanner& other) {
+        // ?
+    }
+};
 
-unique_ptr<set<Matrix_3d>> getUniqueOrientationMatrices() { // only 19, gotta do more variety or make the table yourself
-    auto results_ptr = make_unique<set<Matrix_3d>>(); // invert inverts all 3, x/y/z inverts just 1, try inverting all 1s and 2s in addition
-    // original rotation matrices
-    for_each(ROTATION_MATRICES_AROUND_X.begin(), 
-             ROTATION_MATRICES_AROUND_X.end(), 
-             [&](const Matrix_3d& mat) {
-                results_ptr->insert(mat);
-            });
-    for_each(ROTATION_MATRICES_AROUND_Y.begin(), 
-             ROTATION_MATRICES_AROUND_Y.end(), 
-             [&](const Matrix_3d& mat) {
-                results_ptr->insert(mat);
-            });
-    for_each(ROTATION_MATRICES_AROUND_Z.begin(), 
-             ROTATION_MATRICES_AROUND_Z.end(), 
-             [&](const Matrix_3d& mat) {
-                results_ptr->insert(mat);
-            });
+// read "x,y,z" rows until line break, return read istream
+istream& operator >> (istream& in, Scanner& scanner) {
+    string nextline;
+    while (in.peek() != EOF) {
+        getline(in, nextline);
+        if (nextline == "") { break; } // in now @ new scanner line
+        // otherwise, read x
+        size_t first_comma_idx = nextline.find_first_of(',', 0);
+        int64_t x = static_cast<int64_t>(stoi(nextline.substr(0, first_comma_idx)));
+        // then y
+        size_t second_comma_idx = nextline.find_first_of(',', first_comma_idx + 1);
+        int64_t y = static_cast<int64_t>(stoi(nextline.substr(first_comma_idx + 1, second_comma_idx)));
+        // finally z
+        int64_t z = static_cast<int64_t>(stoi(nextline.substr(second_comma_idx + 1)));
 
-    // flipped rotation matrices
-    auto flipped_x = *flipXHeading(ROTATION_MATRICES_AROUND_X);
-    for_each(flipped_x.begin(), flipped_x.end(), [&](Matrix_3d& mat) {
-        results_ptr->insert(mat);
-    });
-    auto flipped_y = *flipYHeading(ROTATION_MATRICES_AROUND_Y);
-    for_each(flipped_y.begin(), flipped_y.end(), [&](Matrix_3d& mat) {
-        results_ptr->insert(mat);
-    });
-    auto flipped_z = *flipZHeading(ROTATION_MATRICES_AROUND_Z);
-    for_each(flipped_z.begin(), flipped_z.end(), [&](Matrix_3d& mat) {
-        results_ptr->insert(mat);
-    });
-
-    // inverted rotation matrices
-    auto inverted_x = *invert(ROTATION_MATRICES_AROUND_X);
-    for_each(inverted_x.begin(), inverted_x.end(), [&](Matrix_3d& mat) {
-        results_ptr->insert(mat);
-    });
-    auto inverted_y = *invert(ROTATION_MATRICES_AROUND_Y);
-    for_each(inverted_y.begin(), inverted_y.end(), [&](Matrix_3d& mat) {
-        results_ptr->insert(mat);
-    });
-    auto inverted_z = *invert(ROTATION_MATRICES_AROUND_Z);
-    for_each(inverted_z.begin(), inverted_z.end(), [&](Matrix_3d& mat) {
-        results_ptr->insert(mat);
-    });
-
-    // inverted & flipped rotation matrices
-    auto inverted_flipped_x = *invert(vector<Matrix_3d>(forward<const vector<Matrix_3d>&>(flipped_x)));
-    for_each(inverted_flipped_x.begin(), inverted_flipped_x.end(), [&](Matrix_3d& mat) {
-        results_ptr->insert(mat);
-    });
-    auto inverted_flipped_y = *invert(vector<Matrix_3d>(forward<const vector<Matrix_3d>&>(flipped_y)));
-    for_each(inverted_flipped_y.begin(), inverted_flipped_y.end(), [&](Matrix_3d& mat) {
-        results_ptr->insert(mat);
-    });    
-    auto inverted_flipped_z = *invert(vector<Matrix_3d>(forward<const vector<Matrix_3d>&>(flipped_z)));
-    for_each(inverted_flipped_z.begin(), inverted_flipped_z.end(), [&](Matrix_3d& mat) {
-        results_ptr->insert(mat);
-    });
-
-    return results_ptr;
+        // insert to scanner
+        scanner.beacon_detections.push_back(Vector_3d{x, y, z});
+    }
+    return in; // @ new scanner line or EOF
 }
 
 void test() {
@@ -233,29 +215,8 @@ void test() {
     Vector_3d result = *mult(test_vec, test_mat);
     assert(result == (Vector_3d{-1, 3, -2}));
 
-    // flip axis
-    auto flipped = *flipXHeading(ROTATION_MATRICES_AROUND_X);
-    assert(flipped[0] 
-            == (Matrix_3d{
-                Vector_3d{-1, 0, 0}, 
-                Vector_3d{0, 1, 0}, 
-                Vector_3d{0, 0, 1}
-                })
-    ); // TODO: add test for flip on Y, Z axes, expand test for all entries.
-
-    // Invert all entries
-    auto inverted = *invert(ROTATION_MATRICES_AROUND_X);
-    assert(inverted[0]
-            == (Matrix_3d{
-                Vector_3d{-1, 0, 0}, 
-                Vector_3d{0, -1, 0}, 
-                Vector_3d{0, 0, -1}
-            })
-    ); // TODO: expand test for all entries.
-
-    // get all orientation transformation matrices
-    auto all_transformations = *getUniqueOrientationMatrices();
-    assert(all_transformations.size() == 24);
+    
+    
 }
 
 int main() {
