@@ -60,25 +60,25 @@ const array<Matrix_3d, 24> ORIENTATIONS = { // TODO: ERRONEOUS ROTATIONS along f
     },
 
     // facing +y ------------------------------------------------
-    Matrix_3d{ // facing +y, +x+z -> rotate 4 times around y
+    Matrix_3d{ // facing +y, +z+x -> rotate 4 times around y
         Vector_3d{0, 1, 0}, 
-        Vector_3d{1, 0, 0}, 
-        Vector_3d{0, 0, 1}
-    }, 
-    Matrix_3d{ // facing +y, -x+z
-        Vector_3d{ 0, 1, 0}, 
-        Vector_3d{-1, 0, 0}, 
-        Vector_3d{ 0, 0, 1}
+        Vector_3d{0, 0, 1}, 
+        Vector_3d{1, 0, 0}
     }, 
     Matrix_3d{ // facing +y, +x-z
         Vector_3d{0, 1, 0}, 
         Vector_3d{1, 0, 0}, 
         Vector_3d{0, 0,-1}
+    }, 
+    Matrix_3d{ // facing +y, -z-x
+        Vector_3d{ 0, 1, 0}, 
+        Vector_3d{ 0, 0,-1}, 
+        Vector_3d{-1, 0, 0}
     },
-    Matrix_3d{ // facing +y, -x-z
+    Matrix_3d{ // facing +y, -x+z
         Vector_3d{ 0, 1, 0}, 
         Vector_3d{-1, 0, 0}, 
-        Vector_3d{ 0, 0,-1}
+        Vector_3d{ 0, 0, 1}
     },
 
     // facing +z -----------------------------------------------
@@ -87,42 +87,42 @@ const array<Matrix_3d, 24> ORIENTATIONS = { // TODO: ERRONEOUS ROTATIONS along f
         Vector_3d{1, 0, 0}, 
         Vector_3d{0, 1, 0}
     },
-    Matrix_3d{ // facing +z, -x+y
-        Vector_3d{ 0, 0, 1}, 
-        Vector_3d{-1, 0, 0}, 
-        Vector_3d{ 0, 1, 0}
-    },
-    Matrix_3d{ // facing +z, +x-y
+    Matrix_3d{ // facing +z, -y+x
         Vector_3d{0, 0, 1}, 
-        Vector_3d{1, 0, 0}, 
-        Vector_3d{0,-1, 0}
+        Vector_3d{0,-1, 0}, 
+        Vector_3d{1, 0, 0}
     },
     Matrix_3d{ // facing +z, -x-y
         Vector_3d{ 0, 0, 1}, 
         Vector_3d{-1, 0, 0}, 
         Vector_3d{ 0,-1, 0}
     },
+    Matrix_3d{ // facing +z, +y-x
+        Vector_3d{ 0, 0, 1}, 
+        Vector_3d{ 0, 1, 0}, 
+        Vector_3d{-1, 0, 0}
+    },
 
     // facing -x -----------------------------------------------
-    Matrix_3d{ // facing -x, +y+z -> rotate 4 times around x
+    Matrix_3d{ // facing -x, +y-z -> rotate 4 times around x
         Vector_3d{-1, 0, 0}, 
         Vector_3d{ 0, 1, 0}, 
-        Vector_3d{ 0, 0, 1}
+        Vector_3d{ 0, 0,-1}
     }, 
+    Matrix_3d{ // facing -x, -z-y
+        Vector_3d{-1, 0, 0}, 
+        Vector_3d{ 0, 0,-1}, 
+        Vector_3d{ 0,-1, 0}
+    },
     Matrix_3d{ // facing -x, -y+z
         Vector_3d{-1, 0, 0}, 
         Vector_3d{0, -1, 0}, 
         Vector_3d{0,  0, 1}
     },
-    Matrix_3d{ // facing -x, +y-z
+    Matrix_3d{ // facing -x, +z+y
         Vector_3d{-1, 0, 0}, 
-        Vector_3d{0,  1, 0}, 
-        Vector_3d{0,  0,-1}
-    },
-    Matrix_3d{ // facing -x, -y-z
-        Vector_3d{-1, 0, 0}, 
-        Vector_3d{0, -1, 0}, 
-        Vector_3d{0,  0,-1}
+        Vector_3d{ 0, 0, 1}, 
+        Vector_3d{ 0, 1, 0}
     },
 
     // facing -y ----------------------------------------------
@@ -131,42 +131,42 @@ const array<Matrix_3d, 24> ORIENTATIONS = { // TODO: ERRONEOUS ROTATIONS along f
         Vector_3d{1, 0, 0}, 
         Vector_3d{0, 0, 1}
     }, 
-    Matrix_3d{ // facing -y, -x+z
-        Vector_3d{ 0,-1, 0}, 
-        Vector_3d{-1, 0, 0}, 
-        Vector_3d{ 0, 0, 1}
-    }, 
-    Matrix_3d{ // facing -y, +x-z
+    Matrix_3d{ // facing -y, -z+x
         Vector_3d{0,-1, 0}, 
-        Vector_3d{1, 0, 0}, 
-        Vector_3d{0, 0,-1}
-    },
+        Vector_3d{0, 0,-1}, 
+        Vector_3d{1, 0, 0}
+    }, 
     Matrix_3d{ // facing -y, -x-z
         Vector_3d{ 0,-1, 0}, 
         Vector_3d{-1, 0, 0}, 
         Vector_3d{ 0, 0,-1}
     },
+    Matrix_3d{ // facing -y, +z-x
+        Vector_3d{ 0,-1, 0}, 
+        Vector_3d{ 0, 0, 1}, 
+        Vector_3d{-1, 0, 0}
+    },
 
     // facing -z ---------------------------------------------
-    Matrix_3d{ // facing -z, +x+y -> rotate 4 times around z
+    Matrix_3d{ // facing -z, +y+x -> rotate 4 times around z
         Vector_3d{0, 0,-1}, 
-        Vector_3d{1, 0, 0}, 
-        Vector_3d{0, 1, 0}
+        Vector_3d{0, 1, 0}, 
+        Vector_3d{1, 0, 0}
     }, 
     Matrix_3d{ // facing -z, -x+y
         Vector_3d{ 0, 0,-1}, 
         Vector_3d{-1, 0, 0}, 
         Vector_3d{ 0, 1, 0}
     },
+    Matrix_3d{ // facing -z, -y-x
+        Vector_3d{ 0, 0,-1}, 
+        Vector_3d{ 0,-1, 0}, 
+        Vector_3d{-1, 0, 0}
+    },
     Matrix_3d{ // facing -z, +x-y
         Vector_3d{0, 0,-1}, 
         Vector_3d{1, 0, 0}, 
         Vector_3d{0,-1, 0}
-    },
-    Matrix_3d{ // facing -z, -x-y
-        Vector_3d{ 0, 0,-1}, 
-        Vector_3d{-1, 0, 0}, 
-        Vector_3d{ 0,-1, 0}
     }
 };
 
@@ -177,9 +177,8 @@ struct Scanner {
     // For normalization
     bool isNormalized = false;
     bool isOriented = false;
-    shared_ptr<Scanner> closest = nullptr;
     vector<Vector_3d> absolute_beacon_detections;
-    Vector_3d delta_from_closest;
+    Vector_3d delta_from_center = Vector_3d{0, 0, 0}; // Assume at center at initialization
 
     bool isTrueCenter = false;
 
@@ -196,23 +195,19 @@ struct Scanner {
 
         for (int i = 0; i < ORIENTATIONS.size(); i++) {
             vector<Vector_3d>& detections = other_detection_variations[i];
-            map<Vector_3d, int64_t> kvs = *(this->_getPossibleVecDiffs(detections));
+            map<Vector_3d, int64_t> kvs = this->_getPossibleVecDiffs(detections);
             int64_t curr_orientation_max = max_element(kvs.begin(), kvs.end(), [](auto kv1, auto kv2){ return (kv1.second < kv2.second); })->second;
-            cout << "In this orientation, curr_orientation_max = " << curr_orientation_max;
-            cout << " out of " << kvs.size() << " values." << endl;
             for (auto kv : kvs) {
                 if (kv.second >= Scanner::THRESHOLD) { // found first likely? distance that satisfies THRESHOLD
-                    cout << kv.second << endl;
                     // coordinate deltas (i.e., relative position of other from this sensor)
-                    other.closest = shared_ptr<Scanner>(this);
-                    other.delta_from_closest = kv.first;
+                    other.delta_from_center = kv.first + this->delta_from_center;
                     // Absolute distance vectors
                     other.beacon_detections = vector<Vector_3d>(detections); // oriented correctly to closest
                     other.isOriented = true;
-                    other.absolute_beacon_detections = other._traceNormalizeToCenter(detections);
+                    other.absolute_beacon_detections = other._normalizeToCenter(detections);
                     other.isNormalized = true;
 
-                    // trace-normalization until true center
+                    // normalized
                     return (other.absolute_beacon_detections);
                 }
             }
@@ -224,7 +219,7 @@ struct Scanner {
 
 private:
     // Normalize correctly-oriented coordinates to dist relative to true center (scanner 0).
-    vector<Vector_3d> _traceNormalizeToCenter(vector<Vector_3d>& oriented) {
+    vector<Vector_3d> _normalizeToCenter(vector<Vector_3d>& oriented) {
         if (this->isTrueCenter) {
             return oriented;
         }
@@ -233,10 +228,10 @@ private:
         }
         for_each(oriented.begin(), oriented.end(), 
             [&](Vector_3d& vec) {
-                vec = vec + this->delta_from_closest;
+                vec = vec + this->delta_from_center;
             }
         );
-        return (closest->_traceNormalizeToCenter(oriented));
+        return (oriented);
     }
 
     // Return unique_ptr to a vector of all possible orientations to the original relative coordinates as 
@@ -257,19 +252,16 @@ private:
         return (make_unique<vector<vector<Vector_3d>>>(move(results)));
     }
 
-    unique_ptr<map<Vector_3d, int64_t>> _getPossibleVecDiffs(const vector<Vector_3d>& b1_detections) {
+    map<Vector_3d, int64_t> _getPossibleVecDiffs(const vector<Vector_3d>& b1_detections) {
         // ... relative to this beacon's orientation, 
         // no guarantee b1 at same orientation as this beacon! 
         map<Vector_3d, int64_t> results;
         for (const Vector_3d& b1_p1 : b1_detections) {
-            if (b1_p1 == Vector_3d{-660,-479,-426}) {
-                cout << "Hey what's happening?" << endl;
-            }
             for (const Vector_3d& b0_p0 : this->beacon_detections) {
                 results[b0_p0 - b1_p1]++;
             }
         }
-        return (make_unique<map<Vector_3d, int64_t>>(move(results)));
+        return (map<Vector_3d, int64_t>(move(results)));
     }
 };
 
@@ -279,7 +271,7 @@ istream& operator >> (istream& in, Scanner& scanner) {
     string nextline;
     while (in.peek() != EOF) {
         getline(in, nextline);
-        if (nextline == "") { break; } // in now @ new scanner line
+        if (nextline == "" || nextline == "\r") { break; } // in now @ new scanner line
         // otherwise, read x
         size_t first_comma_idx = nextline.find_first_of(',', 0);
         int64_t x = static_cast<int64_t>(stoi(nextline.substr(0, first_comma_idx)));
@@ -318,24 +310,25 @@ size_t getSol1(vector<shared_ptr<Scanner>>& scanner_ptrs) {
     // Add beacons detected by scanner 0
     Scanner& center = *scanner_ptrs[0];
     set<Vector_3d> distinct_pts;
-    vector<Scanner*> fixed;
+    vector<shared_ptr<Scanner>> fixed;
     auto lambdaInsert = [&](Vector_3d coordinate) -> void { // pass-by-value or by-reference?
         distinct_pts.insert(coordinate);
     };
     for_each(center.beacon_detections.begin(), 
              center.beacon_detections.end(), 
              lambdaInsert);
-    fixed.push_back(scanner_ptrs[0].get());
+    fixed.push_back(scanner_ptrs[0]);
 
     // Iteratively produce overlap relationships between different scanners other than scanner 0
-    queue<Scanner*> work;
+    queue<shared_ptr<Scanner>> work;
     for_each(scanner_ptrs.begin() + 1, scanner_ptrs.end(), 
-        [&](shared_ptr<Scanner>& ptr) { work.push(ptr.get()); });
+        [&](shared_ptr<Scanner>& ptr) { work.push(ptr); });
 
     while (!work.empty()) {
-        Scanner* si_ptr = work.front();
+        auto si_ptr = work.front();
         work.pop();
-        for (Scanner* sc_ptr : fixed) {
+        for (auto sc_ptr : fixed) {
+            if (sc_ptr == nullptr) { continue; } // ??? somehow not having this causes iterator to traverse on nullptr despite not having them in fixed
             vector<Vector_3d> new_coords = sc_ptr->getFirstOverlappingTransformation(*si_ptr);
             if (!new_coords.empty()) {
                 fixed.push_back(si_ptr);
@@ -376,11 +369,13 @@ void test() {
     assert(parsed.size() == 5);
     Scanner& s0 = *parsed[0];
     Scanner& s1 = *parsed[1];
+    Scanner& s2 = *parsed[2];
     Scanner& s4 = *parsed[4];
     size_t idx_4 = distance(s4.beacon_detections.begin(), 
                             find(s4.beacon_detections.begin(), s4.beacon_detections.end(), Vector_3d{479, 426, -660}));
     vector<Vector_3d> transformed = s0.getFirstOverlappingTransformation(s1);
     vector<Vector_3d> transformed_on_transformed = s1.getFirstOverlappingTransformation(s4);
+    vector<Vector_3d> t_on_t_on_t = s4.getFirstOverlappingTransformation(s2);
     assert(!transformed.empty());
     assert(!transformed_on_transformed.empty());
 
@@ -391,5 +386,12 @@ void test() {
 
 int main() {
     test();
+
+    // Sol1
+    auto parsed = parser("../resource/q19/input");
+    size_t count = getSol1(parsed);
+    cout << "Part 1: " << count << endl;
+
+
     return 0;
 }
