@@ -30,8 +30,10 @@ public:
     Room(Room const& other) { // copy
         _target = other._target;
         _size = other._size;
-        inhabitants = other.inhabitants;
         _loc = other._loc;
+        for (char const c : other.inhabitants) {
+            inhabitants.push_back(c);
+        }
     }
     Room(char const& target, size_t const& size, deque<char> const& inhabitants, size_t const& loc) { // use this for initialization
         this->_target = target;
@@ -55,7 +57,7 @@ public:
     optional<Room> insert(char& pod) const {
         if (pod != _target) { return nullopt; } // pod not intended for this room
         if (inhabitants.size() == _size) { return nullopt; } // room full
-        if (any_of(inhabitants.begin(), inhabitants.end(), [&](char& resident) { return resident != pod; })) {
+        if (any_of(inhabitants.begin(), inhabitants.end(), [&](char const& resident) { return resident != pod; })) {
             return nullopt; // pod intended for this room, but room has resident of incorrect type
         }
         Room result (*this); // otherwise, create resultant room
@@ -71,12 +73,21 @@ struct State {
 
     State() = delete;
     State(State&&) = default;
-    State(State& other) { // copy: maybe delete?
+    State(State const& other) {
         this->corridor = other.corridor;
-        this->rooms = other.rooms;
         this->energy_used = other.energy_used;
+        for (Room const& room : other.rooms) {
+            this->rooms.push_back(Room(forward<Room const&>(room)));
+        }
     }
-    State(Room& rA, Room& rB, Room& rC, Room& rD) { // Initialization
+    State(Room rA, Room rB, Room rC, Room rD) { // Initialization by rvalue
+        rooms.push_back(rA);
+        rooms.push_back(rB);
+        rooms.push_back(rC);
+        rooms.push_back(rD);
+        energy_used = 0;
+    }
+    State(Room& rA, Room& rB, Room& rC, Room& rD) { // Initialization by reference
         rooms.push_back(rA);
         rooms.push_back(rB);
         rooms.push_back(rC);
@@ -86,8 +97,10 @@ struct State {
 
     State(vector<char> corridor, vector<Room> rooms, int64_t energy_used) { // New state
         this->corridor = corridor;
-        this->rooms = rooms;
         this->energy_used = energy_used;
+        for (Room& room : rooms) {
+            this->rooms.push_back(move(room));
+        }
     }
 
     // State generation
@@ -97,6 +110,8 @@ struct State {
 
         // 1. Move top pod out of room
         for (auto const& room : rooms) {
+            if (room.inhabitants.empty()) { continue; } // seem to have issues w/ copying empty deques, no idea why
+
             // Check movable range in the corridor
             size_t left_limit = room.loc();
             while (left_limit >= 0 && corridor[left_limit] == '.') { left_limit--; }
@@ -108,7 +123,7 @@ struct State {
             Room room_wo_top (room);
             char& top = room_wo_top.inhabitants.front();
             room_wo_top.inhabitants.pop_front();
-            size_t to_corridor_cost = room_wo_top.size() - room_wo_top.inhabitants.size(); // Steps until at corridor[room_loc]
+            int64_t to_corridor_cost = room_wo_top.size() - room_wo_top.inhabitants.size(); // Steps until at corridor[room_loc]
             // useful for both case 1a and 1b so here it is
             
             // 1a. into another (correct) room
@@ -119,8 +134,8 @@ struct State {
                 if (maybe_result.has_value()) {
                     // 1. Compute energy delta
                     Room other_w_top = maybe_result.value();
-                    size_t corridor_cost = other_w_top.loc() - room_wo_top.loc();
-                    size_t from_corridor_cost = other.size() - other.inhabitants.size();
+                    int64_t corridor_cost = other_w_top.loc() - room_wo_top.loc();
+                    int64_t from_corridor_cost = other.size() - other.inhabitants.size();
                     int64_t energy_delta = (to_corridor_cost + corridor_cost + from_corridor_cost) * ENERGY_RATE.at(top);
                     
                     // 2. Create new State instance accordingly
@@ -145,7 +160,7 @@ struct State {
                 new_corridor[i] = top;
 
                 // 2. Compute energy delta
-                size_t corridor_cost = i - room_wo_top.loc();
+                int64_t corridor_cost = abs(static_cast<int64_t>(i) - static_cast<int64_t>(room_wo_top.loc()));
                 int64_t energy_delta = (to_corridor_cost + corridor_cost) * ENERGY_RATE.at(top);
 
                 // 3. Create new State instance accordingly
@@ -165,7 +180,7 @@ struct State {
             if (corridor[i] == '.') { continue; }
 
             // otherwise, put corridor[i] into correct room
-            char pod = corridor[i];
+            // char pod = corridor[i];
 
             // Check movable range in the corridor
             size_t left_limit = i;
@@ -177,13 +192,13 @@ struct State {
             // Check room in range that also happens to be the correct room
             for (auto& room : rooms) {
                 if (room.loc() >= left_limit && room.loc() < right_limit) {
-                    auto maybe_room = room.insert(pod);
+                    auto maybe_room = room.insert(corridor[i]);
                     if (maybe_room.has_value()) {
                         // 1. Compute energy delta
                         Room room_w_i = maybe_room.value();
-                        size_t corridor_cost = abs(static_cast<int64_t>(i) - static_cast<int64_t>(room_w_i.loc()));
-                        size_t from_corridor_cost = room.size() - room.inhabitants.size();
-                        int64_t energy_delta = (corridor_cost + from_corridor_cost) * ENERGY_RATE.at(pod);
+                        int64_t corridor_cost = abs(static_cast<int64_t>(i) - static_cast<int64_t>(room_w_i.loc()));
+                        int64_t from_corridor_cost = room.size() - room.inhabitants.size();
+                        int64_t energy_delta = (corridor_cost + from_corridor_cost) * ENERGY_RATE.at(corridor[i]);
 
                         // 2. Create new state
                         vector<char> new_corridor (corridor);
@@ -205,5 +220,68 @@ struct State {
     }
 
     // Goal check
-
+    // if this state is goal, return energy state, otherwise return nullopt
+    optional<int64_t> isGoal() {
+        if (all_of(rooms.begin(), rooms.end(), [](Room const& room) {
+                return ( all_of(room.inhabitants.begin(), room.inhabitants.end(), [&](char const& resident) { return resident == room.target(); }) );
+            }) &&
+            all_of(corridor.begin(), corridor.end(), [](char const c) { return c == '.'; })
+        ) {
+            return (make_optional<int64_t>(this->energy_used));
+        }
+        return nullopt;
+    }
 };
+
+// Complete state-space search
+int64_t simpleSearch(State& source) {
+    deque<State> states {source};
+    int64_t least_energy = INT64_MAX;
+    while(!states.empty()) {
+        State s = states.front();
+        states.pop_front();
+        auto maybe_energy = s.isGoal();
+        if (maybe_energy.has_value()) {
+            if (maybe_energy.value() < least_energy) {
+                least_energy = maybe_energy.value();
+            }
+        } else {
+            vector<State> buffer = s.generateNextStates();
+            for_each(buffer.begin(), buffer.end(), [&](State& s) { states.push_back(s); });
+        }
+    }
+    return least_energy;
+}
+
+void test() {
+    // State configuration
+    State test_state (Room('A', 2, {'B', 'A'}, 2), Room('B', 2, {'C', 'D'}, 4), Room('C', 2, {'B', 'C'}, 6), Room('D', 2, {'D', 'A'}, 8));
+    assert(all_of(test_state.rooms.begin(), test_state.rooms.end(), [](Room const& room) { return room.inhabitants.size() == room.size(); }));
+    assert(all_of(test_state.corridor.begin(), test_state.corridor.end(), [](char const& c){ return c == '.'; }));
+    assert(test_state.energy_used == 0);
+    
+    // next state generation
+    vector<State> test_nexts = test_state.generateNextStates();
+    State test_state_1 (
+        Room('A', 2, {'A'}, 2), 
+        Room('B', 2, {'B', 'B'}, 4), 
+        Room('C', 2, {'C', 'C'}, 6),
+        Room('D', 2, {'D', 'D'}, 8)
+    );
+    test_state_1.corridor[0] = 'A';
+    test_nexts = test_state_1.generateNextStates();
+    // cout << "Generated" << endl;
+
+    // goal check
+    State test_goal (Room('A', 2, {'A', 'A'}, 2), Room('B', 2, {'B', 'B'}, 4), Room('C', 2, {'C', 'C'}, 6), Room('D', 2, {'D', 'D'}, 8));
+    assert(test_goal.isGoal().value() == 0);
+
+    // Simple state space search
+    int64_t test_result = simpleSearch(test_state);
+    assert(test_result == 12521);
+}
+
+int main() {
+    test();
+    return 0;
+}
